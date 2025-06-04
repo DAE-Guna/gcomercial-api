@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("gcomercial-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+060b36961f1c1b47d460d6e663ff38bedc191ac7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a66d1ebb806249dca8e3bb10d451da50416ca61")]
 [assembly: System.Reflection.AssemblyProductAttribute("gcomercial-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("gcomercial-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

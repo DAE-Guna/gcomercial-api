@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+﻿using gcomercial_api.Models.Shared;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using gcomercial_api.Context;
+using System.Text.Json;
+using gcomercial_api.Services;
 
 namespace gcomercial_api.Controllers.Catalogos
 {
@@ -8,36 +11,25 @@ namespace gcomercial_api.Controllers.Catalogos
     [ApiController]
     public class ProveedorController : ControllerBase
     {
-        // GET: api/<ProveedorController>
-        [HttpGet]
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
+        private readonly IProveedorService _productoService;
 
-        // GET api/<ProveedorController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        public ProveedorController(IProveedorService proveedorService)
         {
-            return "value";
+            _productoService = proveedorService;
         }
-
-        // POST api/<ProveedorController>
-        [HttpPost]
-        public void Post([FromBody] string value)
+        // POST: api/Almacen/estatus
+        [HttpPost("estatus")]
+        public async Task<IActionResult> UpdateProveedores(int id, [FromBody] UpdateStatusRequest request)
         {
-        }
-
-        // PUT api/<ProveedorController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<ProveedorController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            try
+            {
+                var result = await _productoService.UpdateProveedoresStatusAsync(id, request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Error al actualizar el estatus del almacén" });
+            }
         }
     }
 }

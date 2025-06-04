@@ -132,36 +132,8 @@ namespace gcomercial_api.Controllers.Catalogos
             }
         }
 
-        // GET: api/<AlmacenController>
-        [HttpGet]
-        public async Task<IActionResult> AlmacenExistentes()
-        {
-            var almacen = await _gestionComercialContext.Almacenes.ToListAsync();
-            return Ok(almacen);
-        }
-
-        // GET: api/<AlmacenController>
-        [HttpGet("{id}")]
-        public async Task<IActionResult> AlmacenExistentesPorId(int id)
-        {
-            var almacen = await _gestionComercialContext.Almacenes.Where(e => e.Id == id).ToListAsync();
-            return Ok(almacen);
-        }
-
-        [HttpGet("existe/{id}")]
-        public async Task<IActionResult> AlmacenExistentesPorIdSQL(int id)
-        {
-            var almacen = await _gestionComercialContext.Almacenes.FromSqlRaw(
-                "SELECT * FROM dbo.Almacenes WHERE id = {0}", id).ToListAsync();
-
-            var existe = almacen.Count;
-
-            Console.WriteLine(existe);
-
-            return Ok(almacen);
-        }
-
-        [HttpPost("{id}")]
+        // GET: api/Almacen/estatus
+        [HttpPost("estatus")]
         public async Task<IActionResult> UpdateAlmacenStatus(int id, [FromBody] UpdateStatusRequest request)
         {
             try
@@ -170,9 +142,6 @@ namespace gcomercial_api.Controllers.Catalogos
                 {
                     return BadRequest(new { error = "El valor de id_estatus es requerido y debe ser true (activo) o false (inactivo)" });
                 }
-
-                var almacenExists = await _gestionComercialContext.Almacenes.FromSqlRaw(
-                "SELECT * FROM dbo.Almacenes WHERE id = {0}", id).ToListAsync();
 
                 var rowsAffected = await _gestionComercialContext.Database.ExecuteSqlRawAsync(
                     "UPDATE dbo.Almacenes SET id_estatus = {0} WHERE id = {1}",

@@ -166,3 +166,4 @@ C:\Users\ELCPU\Documents\Guna\Sistemas\Apoyo\gcomercial-api\gcomercial-api\bin\D
 C:\Users\ELCPU\Documents\Guna\Sistemas\Apoyo\gcomercial-api\gcomercial-api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 C:\Users\ELCPU\Documents\Guna\Sistemas\Apoyo\gcomercial-api\gcomercial-api\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
 C:\Users\ELCPU\Documents\Guna\Sistemas\Apoyo\gcomercial-api\gcomercial-api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
+C:\Users\ELCPU\Documents\Guna\Sistemas\Apoyo\gcomercial-api\gcomercial-api\obj\Debug\net8.0\gcomercial-api.sourcelink.json

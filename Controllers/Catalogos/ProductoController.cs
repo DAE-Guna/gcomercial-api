@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using gcomercial_api.Context;
 using System.Text.Json;
 using gcomercial_api.Services;
+using gcomercial_api.Models.Shared;
 
 namespace gcomercial_api.Controllers.Catalogos
 {
@@ -33,6 +34,21 @@ namespace gcomercial_api.Controllers.Catalogos
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = "Error al buscar productos" });
+            }
+        }
+
+        // POST: api/Almacen/estatus
+        [HttpPost("estatus")]
+        public async Task<IActionResult> UpdateProductoStatus(int id, [FromBody] UpdateStatusRequest request)
+        {
+            try
+            {
+                var result = await _productoService.UpdateProductoStatusAsync(id, request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Error al actualizar el estatus del almacén" });
             }
         }
     }

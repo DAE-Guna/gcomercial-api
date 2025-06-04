@@ -42,7 +42,7 @@ namespace gcomercial_api.Controllers.Catalogos
             }
         }
 
-        // GET: api/Almacen/estatus
+        // POST: api/Almacen/estatus
         [HttpPost("estatus")]
         public async Task<IActionResult> UpdateAlmacenStatus(int id, [FromBody] UpdateStatusRequest request)
         {

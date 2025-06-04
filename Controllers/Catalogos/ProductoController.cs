@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using Microsoft.EntityFrameworkCore;
+using gcomercial_api.Context;
+using System.Text.Json;
+using gcomercial_api.Services;
 
 namespace gcomercial_api.Controllers.Catalogos
 {
@@ -8,36 +10,30 @@ namespace gcomercial_api.Controllers.Catalogos
     [ApiController]
     public class ProductoController : ControllerBase
     {
-        // GET: api/<ProductoController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly IProductoService _productoService;
+
+        public ProductoController(IProductoService productoService)
         {
-            return new string[] { "value1", "value2" };
+            _productoService = productoService;
         }
 
-        // GET api/<ProductoController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
+        // GET: api/Producto/buscar
+        [HttpGet("buscar")]
+        public async Task<IActionResult> BuscarProductos(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 15,
+            [FromQuery] string search = "",
+            [FromQuery] string filters = "")
         {
-            return "value";
-        }
-
-        // POST api/<ProductoController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<ProductoController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<ProductoController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            try
+            {
+                var result = await _productoService.BuscarProductosAsync(page, pageSize, search, filters);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Error al buscar productos" });
+            }
         }
     }
 }

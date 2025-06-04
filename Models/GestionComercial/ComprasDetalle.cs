@@ -1,0 +1,29 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace gcomercial_api.Models.GestionComercial;
+
+public partial class ComprasDetalle
+{
+    public int IdDetalle { get; set; }
+
+    public int? IdCabecera { get; set; }
+
+    public string? CodigoProducto { get; set; }
+
+    public string? NombreProducto { get; set; }
+
+    public decimal? Cantidad { get; set; }
+
+    public decimal? CantidadPendiente { get; set; }
+
+    public decimal? CantidadSurtida { get; set; }
+
+    public decimal? CostoUnitario { get; set; }
+
+    public decimal? ImporteNeto { get; set; }
+
+    public decimal? ImporteTotal { get; set; }
+
+    public virtual ComprasCabecera? IdCabeceraNavigation { get; set; }
+}

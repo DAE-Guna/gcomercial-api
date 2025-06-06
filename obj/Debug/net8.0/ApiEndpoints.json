@@ -2,7 +2,7 @@
   {
     "ContainingType": "gcomercial_api.Controllers.Catalogos.AlmacenController",
     "Method": "BuscarAlmacenes",
-    "RelativePath": "api/Almacen/buscar",
+    "RelativePath": "api/almacenes/buscar",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -33,7 +33,7 @@
   {
     "ContainingType": "gcomercial_api.Controllers.Catalogos.AlmacenController",
     "Method": "UpdateAlmacenStatus",
-    "RelativePath": "api/Almacen/estatus",
+    "RelativePath": "api/almacenes/estatus",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,

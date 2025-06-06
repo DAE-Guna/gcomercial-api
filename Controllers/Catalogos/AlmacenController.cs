@@ -10,7 +10,7 @@ using gcomercial_api.Models.GestionComercial.DTO;
 
 namespace gcomercial_api.Controllers.Catalogos
 {
-    [Route("api/[controller]")]
+    [Route("api/almacenes")]
     [ApiController]
     public class AlmacenController : ControllerBase
     {

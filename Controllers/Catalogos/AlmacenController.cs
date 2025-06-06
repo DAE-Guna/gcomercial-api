@@ -26,28 +26,27 @@ namespace gcomercial_api.Controllers.Catalogos
 
         // GET: api/Almacen/buscar
         [HttpPost("buscar")]
-        public async Task<IActionResult> BuscarAlmacenes(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 15,
-            [FromQuery] string search = "",
-            [FromBody] BuscarAlmacenesRequestDto request = null)
+        public async Task<IActionResult> BuscarAlmacenes([FromQuery] int page = 1,[FromQuery] int pageSize = 15,[FromQuery] string search = "",[FromBody] BuscarProductosRequestDto request = null)
         {
             try
             {
                 if (page < 1) page = 1;
                 if (pageSize < 1 || pageSize > 100) pageSize = 15;
+
                 var filters = request?.Filters ?? new Dictionary<string, string[]>();
-                var result = await _almacenService.BuscarAlmacenesAsync(
+
+                var result = await _almacenService.BuscarAlmacenesAsync( // Cambiar nombre del método
                     page,
                     pageSize,
                     search ?? "",
                     filters
                 );
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = "Error al buscar almacenes" });
+                return StatusCode(500, new { error = "Error al buscar productos" });
             }
         }
 

@@ -24,7 +24,7 @@
       },
       {
         "Name": "request",
-        "Type": "gcomercial_api.Models.GestionComercial.DTO.BuscarAlmacenesRequestDto",
+        "Type": "gcomercial_api.Models.GestionComercial.DTO.BuscarProductosRequestDto",
         "IsRequired": false
       }
     ],

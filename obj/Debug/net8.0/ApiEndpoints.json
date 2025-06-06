@@ -3,7 +3,7 @@
     "ContainingType": "gcomercial_api.Controllers.Catalogos.AlmacenController",
     "Method": "BuscarAlmacenes",
     "RelativePath": "api/Almacen/buscar",
-    "HttpMethod": "GET",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -23,8 +23,8 @@
         "IsRequired": false
       },
       {
-        "Name": "filters",
-        "Type": "System.String",
+        "Name": "request",
+        "Type": "gcomercial_api.Models.GestionComercial.DTO.BuscarAlmacenesRequestDto",
         "IsRequired": false
       }
     ],
@@ -55,7 +55,7 @@
     "ContainingType": "gcomercial_api.Controllers.Catalogos.ProductoController",
     "Method": "BuscarProductos",
     "RelativePath": "api/Producto/buscar",
-    "HttpMethod": "GET",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -75,8 +75,8 @@
         "IsRequired": false
       },
       {
-        "Name": "filters",
-        "Type": "System.String",
+        "Name": "request",
+        "Type": "gcomercial_api.Models.GestionComercial.DTO.BuscarProductosRequestDto",
         "IsRequired": false
       }
     ],

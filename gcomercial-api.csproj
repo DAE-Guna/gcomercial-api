@@ -23,7 +23,6 @@
   <ItemGroup>
     <Folder Include="Controllers\Compras\" />
     <Folder Include="Controllers\Existencias\" />
-    <Folder Include="Models\GestionComercial\DTO\" />
   </ItemGroup>
 
 </Project>

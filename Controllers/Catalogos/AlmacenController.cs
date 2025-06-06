@@ -4,12 +4,13 @@ using gcomercial_api.Context;
 using gcomercial_api.Models.Shared;
 using System.Text.Json;
 using gcomercial_api.Services;
+using gcomercial_api.Models.GestionComercial.DTO;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace gcomercial_api.Controllers.Catalogos
 {
-    [Route("api/[controller]")]
+    [Route("api/almacenes")]
     [ApiController]
     public class AlmacenController : ControllerBase
     {
@@ -24,16 +25,24 @@ namespace gcomercial_api.Controllers.Catalogos
         }
 
         // GET: api/Almacen/buscar
-        [HttpGet("buscar")]
+        [HttpPost("buscar")]
         public async Task<IActionResult> BuscarAlmacenes(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 15,
             [FromQuery] string search = "",
-            [FromQuery] string filters = "")
+            [FromBody] BuscarAlmacenesRequestDto request = null)
         {
             try
             {
-                var result = await _almacenService.BuscarAlmacenesAsync(page, pageSize, search, filters);
+                if (page < 1) page = 1;
+                if (pageSize < 1 || pageSize > 100) pageSize = 15;
+                var filters = request?.Filters ?? new Dictionary<string, string[]>();
+                var result = await _almacenService.BuscarAlmacenesAsync(
+                    page,
+                    pageSize,
+                    search ?? "",
+                    filters
+                );
                 return Ok(result);
             }
             catch (Exception ex)

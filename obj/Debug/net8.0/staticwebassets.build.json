@@ -1,11 +1,12 @@
 {
   "Version": 1,
-  "Hash": "119ME4oTBiBc1+nBFwkyqlY8FdoNxfyvmRK+JgZK9Fo=",
+  "Hash": "oYblMX3OkLZ1zCI+3iosuIuS2r8RwY7uwAEMxXMFxtQ=",
   "Source": "gcomercial-api",
   "BasePath": "_content/gcomercial-api",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
   "DiscoveryPatterns": [],
-  "Assets": []
+  "Assets": [],
+  "Endpoints": []
 }

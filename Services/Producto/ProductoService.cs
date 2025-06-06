@@ -2,6 +2,9 @@
 using gcomercial_api.Context;
 using System.Text.Json;
 using gcomercial_api.Models.Shared;
+using System.Linq;
+using gcomercial_api.Models.GestionComercial;
+using Microsoft.Data.SqlClient;
 
 namespace gcomercial_api.Services
 {
@@ -14,136 +17,167 @@ namespace gcomercial_api.Services
             _gestionComercialContext = gestionComercialContext;
         }
 
-        public async Task<object> BuscarProductosAsync(int page, int pageSize, string search, string filters)
+        public async Task<object> BuscarProductosAsync(
+            int page,
+            int pageSize,
+            string search,
+            Dictionary<string, string[]> filters)
         {
             try
             {
                 var offset = (page - 1) * pageSize;
 
-                Dictionary<string, string[]> filterDict = new Dictionary<string, string[]>();
-                if (!string.IsNullOrEmpty(filters))
-                {
-                    try
-                    {
-                        filterDict = JsonSerializer.Deserialize<Dictionary<string, string[]>>(filters)
-                                   ?? new Dictionary<string, string[]>();
-                    }
-                    catch
-                    {
-                        filterDict = new Dictionary<string, string[]>();
-                    }
-                }
+                var parameters = new List<SqlParameter>();
+                var whereConditions = new List<string>();
 
-                var query = _gestionComercialContext.VwProductos.AsQueryable();
+                parameters.Add(new SqlParameter("@offset", offset));
+                parameters.Add(new SqlParameter("@pageSize", pageSize));
 
-                // Aplicar filtro de búsqueda general
                 if (!string.IsNullOrEmpty(search))
                 {
-                    query = query.Where(p =>
-                        p.Codigo.StartsWith(search) ||
-                        p.Descripcion.Contains(search) ||
-                        p.Proveedor.Contains(search) ||
-                        p.Departamento.Contains(search) ||
-                        p.Categoria.Contains(search) ||
-                        p.Subcategoria.Contains(search) ||
-                        p.Portafolio.Contains(search) ||
-                        p.Division.Contains(search) ||
-                        p.Marca.Contains(search));
+                    if (filters != null && filters.Count > 0)
+                    {
+                        var searchableColumns = filters.Keys.ToList();
+                        var searchConditions = searchableColumns.Select(column =>
+                            $"[{column}] LIKE '%' + @search + '%'"
+                        );
+                        whereConditions.Add($"({string.Join(" OR ", searchConditions)})");
+                        parameters.Add(new SqlParameter("@search", search));
+                    }
                 }
 
-                // Aplicar filtros específicos por columna
-                foreach (var filter in filterDict)
+                if (filters != null && filters.Count > 0)
                 {
-                    if (filter.Value != null && filter.Value.Length > 0)
+                    foreach (var filter in filters)
                     {
-                        switch (filter.Key.ToLower())
+                        var column = filter.Key;
+                        var values = filter.Value;
+
+                        if (values != null && values.Length > 0)
                         {
-                            case "codigo":
-                                query = query.Where(p => filter.Value.Contains(p.Codigo));
-                                break;
-                            case "descripcion":
-                                query = query.Where(p => filter.Value.Contains(p.Descripcion));
-                                break;
-                            case "proveedor":
-                                query = query.Where(p => filter.Value.Contains(p.Proveedor));
-                                break;
-                            case "departamento":
-                                query = query.Where(p => filter.Value.Contains(p.Departamento));
-                                break;
-                            case "categoria":
-                                query = query.Where(p => filter.Value.Contains(p.Categoria));
-                                break;
-                            case "subcategoria":
-                                query = query.Where(p => filter.Value.Contains(p.Subcategoria));
-                                break;
-                            case "portafolio":
-                                query = query.Where(p => filter.Value.Contains(p.Portafolio));
-                                break;
-                            case "division":
-                                query = query.Where(p => filter.Value.Contains(p.Division));
-                                break;
-                            case "marca":
-                                query = query.Where(p => filter.Value.Contains(p.Marca));
-                                break;
+                            var paramNames = new List<string>();
+                            for (int i = 0; i < values.Length; i++)
+                            {
+                                var paramName = $"@{column}{i}";
+                                paramNames.Add(paramName);
+                                parameters.Add(new SqlParameter(paramName, values[i]));
+                            }
+
+                            whereConditions.Add($"[{column}] IN ({string.Join(", ", paramNames)})");
                         }
                     }
                 }
 
-                // Obtener total de registros
-                var total = await query.CountAsync();
+                var whereClause = whereConditions.Count > 0
+                    ? "WHERE " + string.Join(" AND ", whereConditions)
+                    : "";
 
-                // Obtener datos paginados
-                var items = await query
-                    .OrderBy(p => p.Codigo)
-                    .Skip(offset)
-                    .Take(pageSize)
-                    .Select(p => new
-                    {
-                        id_producto = p.IdProducto,
-                        codigo = p.Codigo,
-                        id_proveedor = p.IdProveedor,
-                        proveedor = p.Proveedor,
-                        id_departamento = p.IdDepartamento,
-                        departamento = p.Departamento,
-                        id_categoria = p.IdCategoria,
-                        categoria = p.Categoria,
-                        id_subcategoria = p.IdSubcategoria,
-                        subcategoria = p.Subcategoria,
-                        id_portafolio = p.IdPortafolio,
-                        portafolio = p.Portafolio,
-                        id_division = p.IdDivision,
-                        division = p.Division,
-                        id_marca = p.IdMarca,
-                        marca = p.Marca,
-                        descripcion = p.Descripcion,
-                        unidad_x_caja = p.UnidadXCaja,
-                        ieps = p.Ieps,
-                        iva = p.Iva,
-                        costo_sin_impuestos = p.CostoSinImpuestos,
-                        costo_con_impuestos = p.CostoConImpuestos,
-                        precio_sin_impuestos = p.PrecioSinImpuestos,
-                        precio_con_impuestos = p.PrecioConImpuestos,
-                        id_estatus = p.IdEstatus
-                    })
-                    .ToListAsync();
+                var countQuery = $@"
+                    SELECT 
+                        COUNT(*) 
+                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
+                    {whereClause}";
 
-                // Construir resultado
-                return new
+                var dataQuery = $@"
+                    SELECT [id_producto]
+                        ,[codigo]
+                        ,[id_proveedor]
+                        ,[proveedor]
+                        ,[id_departamento]
+                        ,[departamento]
+                        ,[id_categoria]
+                        ,[categoria]
+                        ,[id_subcategoria]
+                        ,[subcategoria]
+                        ,[id_portafolio]
+                        ,[portafolio]
+                        ,[id_division]
+                        ,[division]
+                        ,[id_marca]
+                        ,[marca]
+                        ,[descripcion]
+                        ,[unidad_x_caja]
+                        ,[ieps]
+                        ,[iva]
+                        ,[costo_sin_impuestos]
+                        ,[costo_con_impuestos]
+                        ,[precio_sin_impuestos]
+                        ,[precio_con_impuestos]
+                        ,[id_estatus]
+                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
+                    {whereClause}
+                    ORDER BY codigo
+                    OFFSET @offset ROWS
+                    FETCH NEXT @pageSize ROWS ONLY
+                ";
+
+                var countParams = parameters.Where(p => p.ParameterName != "@offset" && p.ParameterName != "@pageSize").ToArray();
+                var total = 0;
+
+                using (var connection = _gestionComercialContext.Database.GetDbConnection())
                 {
-                    items = items,
-                    pagination = new
+                    await connection.OpenAsync();
+
+                    using (var countCommand = connection.CreateCommand())
                     {
-                        total = total,
-                        pageSize = pageSize,
-                        currentPage = page,
-                        totalPages = (int)Math.Ceiling((double)total / pageSize),
-                        hasMore = total > page * pageSize
+                        countCommand.CommandText = countQuery;
+                        foreach (var param in countParams)
+                        {
+                            var dbParam = countCommand.CreateParameter();
+                            dbParam.ParameterName = param.ParameterName;
+                            dbParam.Value = param.Value ?? DBNull.Value;
+                            countCommand.Parameters.Add(dbParam);
+                        }
+
+                        var result = await countCommand.ExecuteScalarAsync();
+                        total = Convert.ToInt32(result);
                     }
-                };
+
+                    var items = new List<Dictionary<string, object>>();
+                    using (var dataCommand = connection.CreateCommand())
+                    {
+                        dataCommand.CommandText = dataQuery;
+                        foreach (var param in parameters)
+                        {
+                            var dbParam = dataCommand.CreateParameter();
+                            dbParam.ParameterName = param.ParameterName;
+                            dbParam.Value = param.Value ?? DBNull.Value;
+                            dataCommand.Parameters.Add(dbParam);
+                        }
+
+                        using (var reader = await dataCommand.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var item = new Dictionary<string, object>();
+                                for (int i = 0; i < reader.FieldCount; i++)
+                                {
+                                    var columnName = reader.GetName(i);
+                                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                    item[columnName] = value;
+                                }
+                                items.Add(item);
+                            }
+                        }
+                    }
+
+                    return new
+                    {
+                        items,
+                        pagination = new
+                        {
+                            total,
+                            pageSize,
+                            currentPage = page,
+                            totalPages = (int)Math.Ceiling((double)total / pageSize),
+                            hasMore = total > page * pageSize
+                        }
+                    };
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error al buscar productos: {ex.Message}", ex);
+                throw new Exception($"Error en BuscarProductosAsync: {ex.Message}", ex);
             }
         }
 

@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using gcomercial_api.Context;
 using gcomercial_api.Models.Shared;
-using System.Text.Json;
+using Microsoft.Data.SqlClient;
+using gcomercial_api.Models.GestionComercial.DTO;
 
 namespace gcomercial_api.Services
 {
@@ -14,108 +15,132 @@ namespace gcomercial_api.Services
             _gestionComercialContext = gestionComercialContext;
         }
 
-        public async Task<object> BuscarAlmacenesAsync(int page, int pageSize, string search, string filters)
+        public async Task<BuscarAlmacenesResponseDto> BuscarAlmacenesAsync(
+            int page,
+            int pageSize,
+            string search,
+            Dictionary<string, string[]> filters)
         {
             try
             {
                 var offset = (page - 1) * pageSize;
 
-                Dictionary<string, string[]> filterDict = new Dictionary<string, string[]>();
-                if (!string.IsNullOrEmpty(filters))
-                {
-                    try
-                    {
-                        filterDict = JsonSerializer.Deserialize<Dictionary<string, string[]>>(filters)
-                                   ?? new Dictionary<string, string[]>();
-                    }
-                    catch
-                    {
-                        filterDict = new Dictionary<string, string[]>();
-                    }
-                }
+                var whereConditions = new List<string>();
+                var parameters = new List<SqlParameter>();
 
-                var query = _gestionComercialContext.Almacenes
-                    .Join(_gestionComercialContext.Bases,
-                          a => a.BaseId,
-                          b => b.Id,
-                          (a, b) => new { Almacen = a, Base = b })
-                    .Join(_gestionComercialContext.Regiones,
-                          ab => ab.Almacen.IdRegion,
-                          r => r.Id,
-                          (ab, r) => new { ab.Almacen, ab.Base, Region = r });
+                parameters.Add(new SqlParameter("@offset", offset));
+                parameters.Add(new SqlParameter("@pageSize", pageSize));
 
                 if (!string.IsNullOrEmpty(search))
                 {
-                    query = query.Where(x =>
-                        x.Almacen.Codigo.StartsWith(search) ||
-                        x.Almacen.Nombre.Contains(search) ||
-                        x.Almacen.Sucursal.Contains(search) ||
-                        x.Base.Nombre.Contains(search) ||
-                        x.Region.Nombre.Contains(search)
-                    );
+                    whereConditions.Add(@"(
+                        codigo LIKE @search + '%' OR 
+                        descripcion LIKE '%' + @search + '%' OR
+                        proveedor LIKE '%' + @search + '%' OR
+                        departamento LIKE '%' + @search + '%' OR
+                        categoria LIKE '%' + @search + '%' OR
+                        subcategoria LIKE '%' + @search + '%' OR
+                        portafolio LIKE '%' + @search + '%' OR
+                        division LIKE '%' + @search + '%' OR
+                        marca LIKE '%' + @search + '%'
+                    )");
+                    parameters.Add(new SqlParameter("@search", search));
                 }
 
-                foreach (var filter in filterDict)
+                if (filters != null && filters.Count > 0)
                 {
-                    if (filter.Value != null && filter.Value.Length > 0)
+                    foreach (var filter in filters)
                     {
-                        switch (filter.Key)
+                        var column = filter.Key;
+                        var values = filter.Value;
+
+                        if (values != null && values.Length > 0)
                         {
-                            case "codigo":
-                                query = query.Where(x => filter.Value.Contains(x.Almacen.Codigo));
-                                break;
-                            case "nombre":
-                                query = query.Where(x => filter.Value.Contains(x.Almacen.Nombre));
-                                break;
-                            case "sucursal":
-                                query = query.Where(x => filter.Value.Contains(x.Almacen.Sucursal));
-                                break;
-                            case "base_nombre":
-                                query = query.Where(x => filter.Value.Contains(x.Base.Nombre));
-                                break;
-                            case "region_nombre":
-                                query = query.Where(x => filter.Value.Contains(x.Region.Nombre));
-                                break;
+                            var parameterNames = new List<string>();
+                            for (int i = 0; i < values.Length; i++)
+                            {
+                                var paramName = $"@{column}{i}";
+                                parameterNames.Add(paramName);
+                                parameters.Add(new SqlParameter(paramName, values[i]));
+                            }
+
+                            whereConditions.Add($"{column} IN ({string.Join(", ", parameterNames)})");
                         }
                     }
                 }
 
-                var total = await query.CountAsync();
+                var whereClause = whereConditions.Count > 0
+                    ? "WHERE " + string.Join(" AND ", whereConditions)
+                    : "";
 
-                var items = await query
-                    .OrderBy(x => x.Almacen.Codigo)
-                    .Skip(offset)
-                    .Take(pageSize)
-                    .Select(x => new
-                    {
-                        id = x.Almacen.Id,
-                        codigo = x.Almacen.Codigo,
-                        nombre = x.Almacen.Nombre,
-                        sucursal = x.Almacen.Sucursal,
-                        base_id = x.Almacen.BaseId,
-                        id_region = x.Almacen.IdRegion,
-                        base_nombre = x.Base.Nombre,
-                        region_nombre = x.Region.Nombre,
-                        id_estatus = x.Almacen.IdEstatus
-                    })
+                var countQuery = $@"
+                    SELECT COUNT(*) as total
+                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
+                    {whereClause}";
+
+                var totalResult = await _gestionComercialContext.Database
+                    .SqlQueryRaw<int>(countQuery, parameters.ToArray())
+                    .FirstOrDefaultAsync();
+
+                var itemsQuery = $@"
+                    SELECT [id_producto]
+                          ,[codigo]
+                          ,[id_proveedor]
+                          ,[proveedor]
+                          ,[id_departamento]
+                          ,[departamento]
+                          ,[id_categoria]
+                          ,[categoria]
+                          ,[id_subcategoria]
+                          ,[subcategoria]
+                          ,[id_portafolio]
+                          ,[portafolio]
+                          ,[id_division]
+                          ,[division]
+                          ,[id_marca]
+                          ,[marca]
+                          ,[descripcion]
+                          ,[unidad_x_caja]
+                          ,[ieps]
+                          ,[iva]
+                          ,[costo_sin_impuestos]
+                          ,[costo_con_impuestos]
+                          ,[precio_sin_impuestos]
+                          ,[precio_con_impuestos]
+                          ,[id_estatus]
+                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
+                    {whereClause}
+                    ORDER BY codigo
+                    OFFSET @offset ROWS
+                    FETCH NEXT @pageSize ROWS ONLY";
+
+                var itemsParameters = new List<SqlParameter>();
+                foreach (var param in parameters)
+                {
+                    itemsParameters.Add(new SqlParameter(param.ParameterName, param.Value));
+                }
+
+                var items = await _gestionComercialContext.Set<ProductoDto>()
+                    .FromSqlRaw(itemsQuery, itemsParameters.ToArray())
                     .ToListAsync();
 
-                return new
+                return new BuscarAlmacenesResponseDto
                 {
-                    items = items,
-                    pagination = new
+                    Items = items,
+                    Pagination = new PaginationDto
                     {
-                        total = total,
-                        pageSize = pageSize,
-                        currentPage = page,
-                        totalPages = (int)Math.Ceiling((double)total / pageSize),
-                        hasMore = total > page * pageSize
+                        Total = totalResult,
+                        PageSize = pageSize,
+                        CurrentPage = page,
+                        TotalPages = (int)Math.Ceiling((double)totalResult / pageSize),
+                        HasMore = totalResult > page * pageSize
                     }
                 };
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error al buscar almacenes: {ex.Message}", ex);
+                // Log the exception
+                throw new ApplicationException("Error al buscar productos", ex);
             }
         }
 

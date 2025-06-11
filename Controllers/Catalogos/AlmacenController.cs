@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using gcomercial_api.Context;
 using gcomercial_api.Models.Shared;
 using System.Text.Json;
-using gcomercial_api.Services;
+using gcomercial_api.Services.Almacen;
 using gcomercial_api.Models.GestionComercial.DTO;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -14,13 +14,10 @@ namespace gcomercial_api.Controllers.Catalogos
     [ApiController]
     public class AlmacenController : ControllerBase
     {
-
-        private readonly GestionComercialDbContext _gestionComercialContext;
         private readonly IAlmacenService _almacenService;
 
-        public AlmacenController(GestionComercialDbContext gestionComercialContext, IAlmacenService almacenService)
+        public AlmacenController(IAlmacenService almacenService)
         {
-            _gestionComercialContext = gestionComercialContext;
             _almacenService = almacenService;
         }
 
@@ -35,12 +32,15 @@ namespace gcomercial_api.Controllers.Catalogos
 
                 var filters = request?.Filters ?? new Dictionary<string, string[]>();
 
-                var result = await _almacenService.BuscarAlmacenesAsync( // Cambiar nombre del método
-                    page,
-                    pageSize,
-                    search ?? "",
-                    filters
-                );
+                var almacenesRequest = new BusquedaAlmacenesRequest
+                {
+                   Page = page,
+                   PageSize = pageSize,
+                   Search = search,
+                   Filters = filters
+                };
+
+                var result = await _almacenService.BuscarAlmacenesAsync(almacenesRequest);
 
                 return Ok(result);
             }

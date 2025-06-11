@@ -20,6 +20,10 @@ public partial class GestionComercialDbContext : DbContext
 
     public virtual DbSet<Basis> Bases { get; set; }
 
+    public virtual DbSet<CamposFiltrable> CamposFiltrables { get; set; }
+
+    public virtual DbSet<CamposFiltrablesValore> CamposFiltrablesValores { get; set; }
+
     public virtual DbSet<Categoria> Categorias { get; set; }
 
     public virtual DbSet<Compra> Compras { get; set; }
@@ -31,6 +35,8 @@ public partial class GestionComercialDbContext : DbContext
     public virtual DbSet<Departamento> Departamentos { get; set; }
 
     public virtual DbSet<Divisione> Divisiones { get; set; }
+
+    public virtual DbSet<Estatus> Estatuses { get; set; }
 
     public virtual DbSet<Existencia> Existencias { get; set; }
 
@@ -70,6 +76,8 @@ public partial class GestionComercialDbContext : DbContext
 
     public virtual DbSet<UnidadesNegocio> UnidadesNegocios { get; set; }
 
+    public virtual DbSet<VwAlmacene> VwAlmacenes { get; set; }
+
     public virtual DbSet<VwCompra> VwCompras { get; set; }
 
     public virtual DbSet<VwComprasDetalle> VwComprasDetalles { get; set; }
@@ -102,7 +110,7 @@ public partial class GestionComercialDbContext : DbContext
                 .HasMaxLength(20)
                 .HasColumnName("codigo");
             entity.Property(e => e.IdEstatus)
-                .HasDefaultValue(true)
+                .HasDefaultValue(1)
                 .HasColumnName("id_estatus");
             entity.Property(e => e.IdRegion).HasColumnName("id_region");
             entity.Property(e => e.Nombre)
@@ -111,6 +119,10 @@ public partial class GestionComercialDbContext : DbContext
             entity.Property(e => e.Sucursal)
                 .HasMaxLength(50)
                 .HasColumnName("sucursal");
+
+            entity.HasOne(d => d.IdEstatusNavigation).WithMany(p => p.Almacenes)
+                .HasForeignKey(d => d.IdEstatus)
+                .HasConstraintName("FK_Almacenes_Almacenes");
         });
 
         modelBuilder.Entity<Basis>(entity =>
@@ -122,6 +134,41 @@ public partial class GestionComercialDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("nombre");
+        });
+
+        modelBuilder.Entity<CamposFiltrable>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CamposFi__3213E83F649F654A");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Activo)
+                .HasDefaultValue(true)
+                .HasColumnName("activo");
+            entity.Property(e => e.Campo)
+                .HasMaxLength(50)
+                .HasColumnName("campo");
+            entity.Property(e => e.Modulo)
+                .HasMaxLength(50)
+                .HasColumnName("modulo");
+        });
+
+        modelBuilder.Entity<CamposFiltrablesValore>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CamposFi__3213E83F8A95A5AD");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IdCampo).HasColumnName("id_campo");
+            entity.Property(e => e.Texto)
+                .HasMaxLength(50)
+                .HasColumnName("texto");
+            entity.Property(e => e.Valor)
+                .HasMaxLength(50)
+                .HasColumnName("valor");
+
+            entity.HasOne(d => d.IdCampoNavigation).WithMany(p => p.CamposFiltrablesValores)
+                .HasForeignKey(d => d.IdCampo)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__CamposFil__id_ca__0F624AF8");
         });
 
         modelBuilder.Entity<Categoria>(entity =>
@@ -336,6 +383,18 @@ public partial class GestionComercialDbContext : DbContext
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
+                .HasColumnName("nombre");
+        });
+
+        modelBuilder.Entity<Estatus>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Estatus__3213E83FB664E9ED");
+
+            entity.ToTable("Estatus", "Catalogos");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(10)
                 .HasColumnName("nombre");
         });
 
@@ -1056,6 +1115,32 @@ public partial class GestionComercialDbContext : DbContext
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
                 .HasColumnName("nombre");
+        });
+
+        modelBuilder.Entity<VwAlmacene>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("VwAlmacenes");
+
+            entity.Property(e => e.Codigo)
+                .HasMaxLength(20)
+                .HasColumnName("codigo");
+            entity.Property(e => e.Estatus)
+                .HasMaxLength(10)
+                .HasColumnName("estatus");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IdEstatus).HasColumnName("id_estatus");
+            entity.Property(e => e.IdRegion).HasColumnName("id_region");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(200)
+                .HasColumnName("nombre");
+            entity.Property(e => e.Region)
+                .HasMaxLength(20)
+                .HasColumnName("region");
+            entity.Property(e => e.Sucursal)
+                .HasMaxLength(50)
+                .HasColumnName("sucursal");
         });
 
         modelBuilder.Entity<VwCompra>(entity =>

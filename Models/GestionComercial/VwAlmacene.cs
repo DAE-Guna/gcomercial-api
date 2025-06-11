@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace gcomercial_api.Models.GestionComercial;
 
-public partial class Almacene
+public partial class VwAlmacene
 {
     public int Id { get; set; }
 
@@ -11,13 +11,13 @@ public partial class Almacene
 
     public string? Nombre { get; set; }
 
-    public int? BaseId { get; set; }
-
     public string? Sucursal { get; set; }
 
     public int? IdRegion { get; set; }
 
+    public string Region { get; set; } = null!;
+
     public int? IdEstatus { get; set; }
 
-    public virtual Estatus? IdEstatusNavigation { get; set; }
+    public string? Estatus { get; set; }
 }

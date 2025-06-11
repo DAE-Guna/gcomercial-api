@@ -1,198 +1,115 @@
-﻿using Microsoft.EntityFrameworkCore;
 using gcomercial_api.Context;
-using gcomercial_api.Models.Shared;
-using Microsoft.Data.SqlClient;
 using gcomercial_api.Models.GestionComercial.DTO;
+using gcomercial_api.Models.Shared;
+using gcomercial_api.Services.Common;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using System.Data.Common;
 
-namespace gcomercial_api.Services
+namespace gcomercial_api.Services.Almacen
 {
+    // DTOs específicos para búsqueda de almacenes
+    public class BusquedaAlmacenesRequest : GenericSearchRequest
+    {
+        // Propiedades específicas para almacenes si se necesitan
+    }
+
+    public interface IAlmacenService : IGenericService<BusquedaAlmacenesRequest>
+    {
+        // Métodos específicos para almacenes si se necesitan
+        Task<PaginatedResult<Dictionary<string, object>>> BuscarAlmacenesAsync(BusquedaAlmacenesRequest request);
+        Task<object> UpdateAlmacenStatusAsync(int id, UpdateStatusRequest request);
+    }
+
+    // Servicio para almacenes que usa los componentes genéricos
     public class AlmacenService : IAlmacenService
     {
-        private readonly GestionComercialDbContext _gestionComercialContext;
+        private readonly GestionComercialDbContext _context;
+        private readonly IQueryBuilderService _queryBuilder;
+        private readonly IDatabaseService _databaseService;
+        private readonly ILogger<AlmacenService> _logger;
+        private const string MODULO = "almacenes";
+        private const string VIEW_NAME = "VwAlmacenes";
+        private const string TABLE_NAME = "Almacenes";
+        private const string ORDER_BY_COLUMN = "codigo";
 
-        public AlmacenService(GestionComercialDbContext gestionComercialContext)
+        public AlmacenService(
+            GestionComercialDbContext context,
+            IQueryBuilderService queryBuilder,
+            IDatabaseService databaseService,
+            ILogger<AlmacenService> logger)
         {
-            _gestionComercialContext = gestionComercialContext;
+            _context = context;
+            _queryBuilder = queryBuilder;
+            _databaseService = databaseService;
+            _logger = logger;
         }
 
-        public async Task<object> BuscarAlmacenesAsync(int page,int pageSize,string search,Dictionary<string, string[]> filters)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAlmacenesAsync(BusquedaAlmacenesRequest request)
         {
             try
             {
-                var offset = (page - 1) * pageSize;
+                // Validar parámetros
+                if (request.Page < 1) request.Page = 1;
+                if (request.PageSize < 1 || request.PageSize > 100) request.PageSize = 10;
 
-                var parameters = new List<SqlParameter>();
-                var whereConditions = new List<string>();
+                // Obtener campos filtrables usando el servicio genérico
+                var camposFiltrables = await _databaseService.ObtenerCamposFiltrablesAsync(MODULO);
 
-                parameters.Add(new SqlParameter("@offset", offset));
-                parameters.Add(new SqlParameter("@pageSize", pageSize));
+                // Construir query dinámico usando el servicio genérico
+                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, ORDER_BY_COLUMN);
 
-                if (!string.IsNullOrEmpty(search))
+                // Ejecutar usando la conexión del contexto
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                // Contar total con query dinámico
+                var total = await _databaseService.EjecutarConteoAsync(connection, sqlInfo);
+
+                // Obtener datos con query dinámico
+                var items = await _databaseService.EjecutarConsultaDatosAsync(connection, sqlInfo);
+
+                return new PaginatedResult<Dictionary<string, object>>
                 {
-                    if (filters != null && filters.Count > 0)
+                    Items = items,
+                    Pagination = new PaginationInfo
                     {
-                        var searchableColumns = filters.Keys.ToList();
-                        var searchConditions = searchableColumns.Select(column =>
-                            $"[{column}] LIKE '%' + @search + '%'"
-                        );
-                        whereConditions.Add($"({string.Join(" OR ", searchConditions)})");
-                        parameters.Add(new SqlParameter("@search", search));
+                        Total = total,
+                        PageSize = request.PageSize,
+                        CurrentPage = request.Page,
+                        TotalPages = (int)Math.Ceiling((double)total / request.PageSize),
+                        HasMore = total > request.Page * request.PageSize
                     }
-                }
-
-                if (filters != null && filters.Count > 0)
-                {
-                    foreach (var filter in filters)
-                    {
-                        var column = filter.Key;
-                        var values = filter.Value;
-
-                        if (values != null && values.Length > 0)
-                        {
-                            var paramNames = new List<string>();
-                            for (int i = 0; i < values.Length; i++)
-                            {
-                                var paramName = $"@{column}{i}";
-                                paramNames.Add(paramName);
-                                parameters.Add(new SqlParameter(paramName, values[i]));
-                            }
-
-                            whereConditions.Add($"[{column}] IN ({string.Join(", ", paramNames)})");
-                        }
-                    }
-                }
-
-                var whereClause = whereConditions.Count > 0
-                    ? "WHERE " + string.Join(" AND ", whereConditions)
-                    : "";
-
-                var countQuery = $@"
-                    SELECT 
-                        COUNT(*) 
-                    FROM dbo.Almacenes a
-                    JOIN Bases b ON a.base_id = b.id
-                    JOIN dbo.Regiones r ON a.id_region = r.id
-                    {whereClause}
-                ";
-
-                 var dataQuery = $@"
-                    SELECT 
-                        a.id,
-                        a.codigo,
-                        a.nombre,
-                        a.sucursal,
-                        a.base_id,
-                        a.id_region,
-                        b.nombre as base_nombre,
-                        r.nombre as region_nombre,
-                        a.id_estatus
-                    FROM dbo.Almacenes a
-                    JOIN Bases b ON a.base_id = b.id
-                    JOIN dbo.Regiones r ON a.id_region = r.id
-                    {whereClause}
-                    ORDER BY a.codigo
-                    OFFSET @offset ROWS
-                    FETCH NEXT @pageSize ROWS ONLY
-                 ";
-
-                var countParams = parameters.Where(p => p.ParameterName != "@offset" && p.ParameterName != "@pageSize").ToArray();
-                var total = 0;
-
-                using (var connection = _gestionComercialContext.Database.GetDbConnection())
-                {
-                    await connection.OpenAsync();
-
-                    using (var countCommand = connection.CreateCommand())
-                    {
-                        countCommand.CommandText = countQuery;
-                        foreach (var param in countParams)
-                        {
-                            var dbParam = countCommand.CreateParameter();
-                            dbParam.ParameterName = param.ParameterName;
-                            dbParam.Value = param.Value ?? DBNull.Value;
-                            countCommand.Parameters.Add(dbParam);
-                        }
-
-                        var result = await countCommand.ExecuteScalarAsync();
-                        total = Convert.ToInt32(result);
-                    }
-
-                    var items = new List<Dictionary<string, object>>();
-                    using (var dataCommand = connection.CreateCommand())
-                    {
-                        dataCommand.CommandText = dataQuery;
-                        foreach (var param in parameters)
-                        {
-                            var dbParam = dataCommand.CreateParameter();
-                            dbParam.ParameterName = param.ParameterName;
-                            dbParam.Value = param.Value ?? DBNull.Value;
-                            dataCommand.Parameters.Add(dbParam);
-                        }
-
-                        using (var reader = await dataCommand.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                var item = new Dictionary<string, object>();
-                                for (int i = 0; i < reader.FieldCount; i++)
-                                {
-                                    var columnName = reader.GetName(i);
-                                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                                    item[columnName] = value;
-                                }
-                                items.Add(item);
-                            }
-                        }
-                    }
-
-                    return new
-                    {
-                        items,
-                        pagination = new
-                        {
-                            total,
-                            pageSize,
-                            currentPage = page,
-                            totalPages = (int)Math.Ceiling((double)total / pageSize),
-                            hasMore = total > page * pageSize
-                        }
-                    };
-                }
+                };
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error en BuscarProductosAsync: {ex.Message}", ex);
+                _logger.LogError(ex, "Error al buscar almacenes: {@Request}", request);
+                throw new Exception($"Error en BuscarAsync: {ex.Message}", ex);
             }
         }
 
         public async Task<object> UpdateAlmacenStatusAsync(int id, UpdateStatusRequest request)
         {
-            try
-            {
-                if (request.IdEstatus == null)
-                {
-                    throw new ArgumentException("El valor de id_estatus es requerido y debe ser true (activo) o false (inactivo)");
-                }
-
-                var rowsAffected = await _gestionComercialContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE dbo.Almacenes SET id_estatus = {0} WHERE id = {1}",
-                    request.IdEstatus, id
-                );
-
-                if (rowsAffected == 0)
-                {
-                    throw new KeyNotFoundException("Almacén no encontrado");
-                }
-
-                return new
-                {
-                    message = $"Estatus del almacén actualizado correctamente a {(request.IdEstatus == true ? "activo" : "inactivo")}"
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error al actualizar el estatus del almacén: {ex.Message}", ex);
-            }
+            return await _databaseService.UpdateStatusAsync(TABLE_NAME, id, request, "Almacén");
         }
+        
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaAlmacenesRequest request)
+        {
+            return await BuscarAlmacenesAsync(request);
+        }
+        
+        public async Task<object> UpdateStatusAsync(int id, UpdateStatusRequest request)
+        {
+            return await UpdateAlmacenStatusAsync(id, request);
+        }
+    }
+
+    // Clases de apoyo específicas para almacenes
+    public class OpcionFiltro
+    {
+        public string Valor { get; set; } = string.Empty;
+        public string Texto { get; set; } = string.Empty;
     }
 }

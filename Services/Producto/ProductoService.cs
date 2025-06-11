@@ -45,24 +45,18 @@ namespace gcomercial_api.Services
         {
             try
             {
-                // Validar parámetros
                 if (request.Page < 1) request.Page = 1;
                 if (request.PageSize < 1 || request.PageSize > 100) request.PageSize = 10;
 
-                // Obtener campos filtrables usando el servicio genérico
                 var camposFiltrables = await _databaseService.ObtenerCamposFiltrablesAsync(MODULO);
 
-                // Construir query dinámico usando el servicio genérico
                 var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, ORDER_BY_COLUMN);
 
-                // Ejecutar usando la conexión del contexto
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
 
-                // Contar total con query dinámico
                 var total = await _databaseService.EjecutarConteoAsync(connection, sqlInfo);
 
-                // Obtener datos con query dinámico
                 var items = await _databaseService.EjecutarConsultaDatosAsync(connection, sqlInfo);
 
                 return new PaginatedResult<Dictionary<string, object>>

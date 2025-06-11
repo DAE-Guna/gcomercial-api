@@ -5,6 +5,7 @@ using System.Text.Json;
 using gcomercial_api.Services;
 using gcomercial_api.Models.Shared;
 using gcomercial_api.Models.GestionComercial.DTO;
+using gcomercial_api.Services.Almacen;
 
 namespace gcomercial_api.Controllers.Catalogos
 {
@@ -21,11 +22,7 @@ namespace gcomercial_api.Controllers.Catalogos
 
         // GET: api/Producto/buscar
         [HttpPost("buscar")]
-        public async Task<IActionResult> BuscarProductos(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 15,
-            [FromQuery] string search = "",
-            [FromBody] BuscarProductosRequestDto request = null) // Solo cambiar el nombre del DTO
+        public async Task<IActionResult> BuscarProductos([FromQuery] int page = 1,[FromQuery] int pageSize = 15,[FromQuery] string search = "",[FromBody] BuscarProductosRequestDto request = null)
         {
             try
             {
@@ -34,12 +31,15 @@ namespace gcomercial_api.Controllers.Catalogos
 
                 var filters = request?.Filters ?? new Dictionary<string, string[]>();
 
-                var result = await _productoService.BuscarProductosAsync( // Cambiar nombre del método
-                    page,
-                    pageSize,
-                    search ?? "",
-                    filters
-                );
+                var ProductosRequest = new BusquedaProductoRequest
+                {
+                   Page = page,
+                   PageSize = pageSize,
+                   Search = search,
+                   Filters = filters
+                };
+
+                var result = await _productoService.BuscarProductosAsync(ProductosRequest);
 
                 return Ok(result);
             }

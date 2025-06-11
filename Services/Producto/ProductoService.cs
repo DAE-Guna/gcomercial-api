@@ -5,210 +5,98 @@ using gcomercial_api.Models.Shared;
 using System.Linq;
 using gcomercial_api.Models.GestionComercial;
 using Microsoft.Data.SqlClient;
+using gcomercial_api.Services.Common;
+using gcomercial_api.Services.Almacen;
 
 namespace gcomercial_api.Services
 {
+    public class BusquedaProductoRequest : GenericSearchRequest
+    {
+        // Propiedades específicas para almacenes si se necesitan
+    }
+
+    public interface IProductoService : IGenericService<BusquedaProductoRequest>
+    {
+        Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request);
+        Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request);
+    }
+
     public class ProductoService : IProductoService
     {
-        private readonly GestionComercialDbContext _gestionComercialContext;
+        private readonly GestionComercialDbContext _context;
+        private readonly IQueryBuilderService _queryBuilder;
+        private readonly IDatabaseService _databaseService;
+        private const string MODULO = "productos";
+        private const string VIEW_NAME = "Vw_Productos";
+        private const string TABLE_NAME = "Productos";
+        private const string ORDER_BY_COLUMN = "codigo";
 
-        public ProductoService(GestionComercialDbContext gestionComercialContext)
+        public ProductoService(
+            GestionComercialDbContext context,
+            IQueryBuilderService queryBuilder,
+            IDatabaseService databaseService)
         {
-            _gestionComercialContext = gestionComercialContext;
+            _context = context;
+            _queryBuilder = queryBuilder;
+            _databaseService = databaseService;
         }
 
-        public async Task<object> BuscarProductosAsync(
-            int page,
-            int pageSize,
-            string search,
-            Dictionary<string, string[]> filters)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request)
         {
             try
             {
-                var offset = (page - 1) * pageSize;
+                // Validar parámetros
+                if (request.Page < 1) request.Page = 1;
+                if (request.PageSize < 1 || request.PageSize > 100) request.PageSize = 10;
 
-                var parameters = new List<SqlParameter>();
-                var whereConditions = new List<string>();
+                // Obtener campos filtrables usando el servicio genérico
+                var camposFiltrables = await _databaseService.ObtenerCamposFiltrablesAsync(MODULO);
 
-                parameters.Add(new SqlParameter("@offset", offset));
-                parameters.Add(new SqlParameter("@pageSize", pageSize));
+                // Construir query dinámico usando el servicio genérico
+                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, ORDER_BY_COLUMN);
 
-                if (!string.IsNullOrEmpty(search))
+                // Ejecutar usando la conexión del contexto
+                using var connection = _context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                // Contar total con query dinámico
+                var total = await _databaseService.EjecutarConteoAsync(connection, sqlInfo);
+
+                // Obtener datos con query dinámico
+                var items = await _databaseService.EjecutarConsultaDatosAsync(connection, sqlInfo);
+
+                return new PaginatedResult<Dictionary<string, object>>
                 {
-                    if (filters != null && filters.Count > 0)
+                    Items = items,
+                    Pagination = new PaginationInfo
                     {
-                        var searchableColumns = filters.Keys.ToList();
-                        var searchConditions = searchableColumns.Select(column =>
-                            $"[{column}] LIKE '%' + @search + '%'"
-                        );
-                        whereConditions.Add($"({string.Join(" OR ", searchConditions)})");
-                        parameters.Add(new SqlParameter("@search", search));
+                        Total = total,
+                        PageSize = request.PageSize,
+                        CurrentPage = request.Page,
+                        TotalPages = (int)Math.Ceiling((double)total / request.PageSize),
+                        HasMore = total > request.Page * request.PageSize
                     }
-                }
-
-                if (filters != null && filters.Count > 0)
-                {
-                    foreach (var filter in filters)
-                    {
-                        var column = filter.Key;
-                        var values = filter.Value;
-
-                        if (values != null && values.Length > 0)
-                        {
-                            var paramNames = new List<string>();
-                            for (int i = 0; i < values.Length; i++)
-                            {
-                                var paramName = $"@{column}{i}";
-                                paramNames.Add(paramName);
-                                parameters.Add(new SqlParameter(paramName, values[i]));
-                            }
-
-                            whereConditions.Add($"[{column}] IN ({string.Join(", ", paramNames)})");
-                        }
-                    }
-                }
-
-                var whereClause = whereConditions.Count > 0
-                    ? "WHERE " + string.Join(" AND ", whereConditions)
-                    : "";
-
-                var countQuery = $@"
-                    SELECT 
-                        COUNT(*) 
-                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
-                    {whereClause}";
-
-                var dataQuery = $@"
-                    SELECT [id_producto]
-                        ,[codigo]
-                        ,[id_proveedor]
-                        ,[proveedor]
-                        ,[id_departamento]
-                        ,[departamento]
-                        ,[id_categoria]
-                        ,[categoria]
-                        ,[id_subcategoria]
-                        ,[subcategoria]
-                        ,[id_portafolio]
-                        ,[portafolio]
-                        ,[id_division]
-                        ,[division]
-                        ,[id_marca]
-                        ,[marca]
-                        ,[descripcion]
-                        ,[unidad_x_caja]
-                        ,[ieps]
-                        ,[iva]
-                        ,[costo_sin_impuestos]
-                        ,[costo_con_impuestos]
-                        ,[precio_sin_impuestos]
-                        ,[precio_con_impuestos]
-                        ,[id_estatus]
-                    FROM [dbGestionComercial].[dbo].[Vw_Productos]
-                    {whereClause}
-                    ORDER BY codigo
-                    OFFSET @offset ROWS
-                    FETCH NEXT @pageSize ROWS ONLY
-                ";
-
-                var countParams = parameters.Where(p => p.ParameterName != "@offset" && p.ParameterName != "@pageSize").ToArray();
-                var total = 0;
-
-                using (var connection = _gestionComercialContext.Database.GetDbConnection())
-                {
-                    await connection.OpenAsync();
-
-                    using (var countCommand = connection.CreateCommand())
-                    {
-                        countCommand.CommandText = countQuery;
-                        foreach (var param in countParams)
-                        {
-                            var dbParam = countCommand.CreateParameter();
-                            dbParam.ParameterName = param.ParameterName;
-                            dbParam.Value = param.Value ?? DBNull.Value;
-                            countCommand.Parameters.Add(dbParam);
-                        }
-
-                        var result = await countCommand.ExecuteScalarAsync();
-                        total = Convert.ToInt32(result);
-                    }
-
-                    var items = new List<Dictionary<string, object>>();
-                    using (var dataCommand = connection.CreateCommand())
-                    {
-                        dataCommand.CommandText = dataQuery;
-                        foreach (var param in parameters)
-                        {
-                            var dbParam = dataCommand.CreateParameter();
-                            dbParam.ParameterName = param.ParameterName;
-                            dbParam.Value = param.Value ?? DBNull.Value;
-                            dataCommand.Parameters.Add(dbParam);
-                        }
-
-                        using (var reader = await dataCommand.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                var item = new Dictionary<string, object>();
-                                for (int i = 0; i < reader.FieldCount; i++)
-                                {
-                                    var columnName = reader.GetName(i);
-                                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                                    item[columnName] = value;
-                                }
-                                items.Add(item);
-                            }
-                        }
-                    }
-
-                    return new
-                    {
-                        items,
-                        pagination = new
-                        {
-                            total,
-                            pageSize,
-                            currentPage = page,
-                            totalPages = (int)Math.Ceiling((double)total / pageSize),
-                            hasMore = total > page * pageSize
-                        }
-                    };
-                }
+                };
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error en BuscarProductosAsync: {ex.Message}", ex);
+                throw new Exception($"Error en BuscarAsync: {ex.Message}", ex);
             }
         }
 
         public async Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request)
         {
-            try
-            {
-                if (request.IdEstatus == null)
-                {
-                    throw new ArgumentException("El valor de id_estatus es requerido y debe ser true (activo) o false (inactivo)");
-                }
+            return await _databaseService.UpdateStatusAsync(TABLE_NAME, id, request, "Productos");
+        }
 
-                var rowsAffected = await _gestionComercialContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE dbo.Productos SET id_estatus = {0} WHERE id = {1}",
-                    request.IdEstatus, id
-                );
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaProductoRequest request)
+        {
+            return await BuscarProductosAsync(request);
+        }
 
-                if (rowsAffected == 0)
-                {
-                    throw new KeyNotFoundException("Almacén no encontrado");
-                }
-
-                return new
-                {
-                    message = $"Estatus del almacén actualizado correctamente a {(request.IdEstatus == true ? "activo" : "inactivo")}"
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error al actualizar el estatus del almacén: {ex.Message}", ex);
-            }
+        public async Task<object> UpdateStatusAsync(int id, UpdateStatusRequest request)
+        {
+            return await UpdateProductoStatusAsync(id, request);
         }
     }
 }

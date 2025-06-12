@@ -54,4 +54,6 @@ public partial class VwProducto
     public decimal PrecioConImpuestos { get; set; }
 
     public bool? IdEstatus { get; set; }
+
+    public string? Estatus { get; set; }
 }

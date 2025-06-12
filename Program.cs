@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using gcomercial_api.Context;
 using gcomercial_api.Services;
+using gcomercial_api.Services.Filtros;
+using gcomercial_api.Services.Almacen;
+using gcomercial_api.Services.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+builder.Services.AddMemoryCache();
 
 
 builder.Services.AddDbContext<GeneralDbContext>(options =>
@@ -23,10 +28,9 @@ builder.Services.AddDbContext<CuernavacaDbContext>(options =>
 builder.Services.AddDbContext<GestionComercialDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GestionComercialConnection")));
 
+builder.Services.AddCommonServices();
 
-builder.Services.AddScoped<IAlmacenService, AlmacenService>();
-builder.Services.AddScoped<IProductoService, ProductoService>();
-builder.Services.AddScoped<IProveedorService, ProveedorService>();
+
 
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

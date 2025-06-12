@@ -1,37 +1,31 @@
-﻿using Microsoft.EntityFrameworkCore;
-using gcomercial_api.Context;
-using System.Text.Json;
+﻿using gcomercial_api.Context;
 using gcomercial_api.Models.Shared;
-using System.Linq;
-using gcomercial_api.Models.GestionComercial;
-using Microsoft.Data.SqlClient;
-using gcomercial_api.Services.Common;
 using gcomercial_api.Services.Almacen;
+using gcomercial_api.Services.Common;
+using Microsoft.EntityFrameworkCore;
 
-namespace gcomercial_api.Services
+namespace gcomercial_api.Services.Existencias
 {
-    public class BusquedaProductoRequest : GenericSearchRequest
+    public class BusquedaExistenciaRequest : GenericSearchRequest
     {
         // Propiedades específicas para almacenes si se necesitan
     }
 
-    public interface IProductoService : IGenericService<BusquedaProductoRequest>
+    public interface IExistenciaService : IGenericService<BusquedaExistenciaRequest>
     {
-        Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request);
-        Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request);
+        Task<PaginatedResult<Dictionary<string, object>>> BuscarExistenciasAsync(BusquedaExistenciaRequest request);
     }
-
-    public class ProductoService : IProductoService
+    public class ExistenciasService : IExistenciaService
     {
         private readonly GestionComercialDbContext _context;
         private readonly IQueryBuilderService _queryBuilder;
         private readonly IDatabaseService _databaseService;
-        private const string MODULO = "productos";
-        private const string VIEW_NAME = "Vw_Productos";
-        private const string TABLE_NAME = "Productos";
+        private const string MODULO = "existencias";
+        private const string VIEW_NAME = "Vw_Existencias";
+        private const string TABLE_NAME = "Existencias";
         private const string ORDER_BY_COLUMN = "codigo";
 
-        public ProductoService(
+        public ExistenciasService(
             GestionComercialDbContext context,
             IQueryBuilderService queryBuilder,
             IDatabaseService databaseService)
@@ -41,7 +35,7 @@ namespace gcomercial_api.Services
             _databaseService = databaseService;
         }
 
-        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarExistenciasAsync(BusquedaExistenciaRequest request)
         {
             try
             {
@@ -79,20 +73,14 @@ namespace gcomercial_api.Services
                 throw new Exception($"Error en BuscarAsync: {ex.Message}", ex);
             }
         }
-
-        public async Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaExistenciaRequest request)
         {
-            return await _databaseService.UpdateStatusAsync(TABLE_NAME, id, request, "Productos");
+            return await BuscarExistenciasAsync(request);
         }
 
-        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaProductoRequest request)
+        Task<object> IGenericService<BusquedaExistenciaRequest>.UpdateStatusAsync(int id, UpdateStatusRequest request)
         {
-            return await BuscarProductosAsync(request);
-        }
-
-        public async Task<object> UpdateStatusAsync(int id, UpdateStatusRequest request)
-        {
-            return await UpdateProductoStatusAsync(id, request);
+            throw new NotImplementedException();
         }
     }
 }

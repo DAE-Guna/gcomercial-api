@@ -1,37 +1,32 @@
-﻿using Microsoft.EntityFrameworkCore;
-using gcomercial_api.Context;
-using System.Text.Json;
+﻿using gcomercial_api.Context;
 using gcomercial_api.Models.Shared;
-using System.Linq;
-using gcomercial_api.Models.GestionComercial;
-using Microsoft.Data.SqlClient;
 using gcomercial_api.Services.Common;
-using gcomercial_api.Services.Almacen;
+using gcomercial_api.Services.Existencias;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.EntityFrameworkCore;
 
-namespace gcomercial_api.Services
+namespace gcomercial_api.Services.OrdenCompra
 {
-    public class BusquedaProductoRequest : GenericSearchRequest
+    public class BusquedaOrdenCompraRequest : GenericSearchRequest
     {
         // Propiedades específicas para almacenes si se necesitan
     }
 
-    public interface IProductoService : IGenericService<BusquedaProductoRequest>
+    public interface IOrdenCompraService : IGenericService<BusquedaOrdenCompraRequest>
     {
-        Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request);
-        Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request);
+        Task<PaginatedResult<Dictionary<string, object>>> BuscarOrdenCompraAsync(BusquedaOrdenCompraRequest request);
     }
-
-    public class ProductoService : IProductoService
+    public class OrdenCompraService : IOrdenCompraService
     {
         private readonly GestionComercialDbContext _context;
         private readonly IQueryBuilderService _queryBuilder;
         private readonly IDatabaseService _databaseService;
-        private const string MODULO = "productos";
+        private const string MODULO = "odrenCompras";
         private const string VIEW_NAME = "Vw_Productos";
         private const string TABLE_NAME = "Productos";
         private const string ORDER_BY_COLUMN = "codigo";
 
-        public ProductoService(
+        public OrdenCompraService(
             GestionComercialDbContext context,
             IQueryBuilderService queryBuilder,
             IDatabaseService databaseService)
@@ -41,7 +36,7 @@ namespace gcomercial_api.Services
             _databaseService = databaseService;
         }
 
-        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarProductosAsync(BusquedaProductoRequest request)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarOrdenCompraAsync(BusquedaOrdenCompraRequest request)
         {
             try
             {
@@ -79,20 +74,15 @@ namespace gcomercial_api.Services
                 throw new Exception($"Error en BuscarAsync: {ex.Message}", ex);
             }
         }
-
-        public async Task<object> UpdateProductoStatusAsync(int id, UpdateStatusRequest request)
+        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaOrdenCompraRequest request)
         {
-            return await _databaseService.UpdateStatusAsync(TABLE_NAME, id, request, "Productos");
+            return await BuscarOrdenCompraAsync(request);
         }
 
-        public async Task<PaginatedResult<Dictionary<string, object>>> BuscarAsync(BusquedaProductoRequest request)
+        Task<object> IGenericService<BusquedaOrdenCompraRequest>.UpdateStatusAsync(int id, UpdateStatusRequest request)
         {
-            return await BuscarProductosAsync(request);
+            throw new NotImplementedException();
         }
 
-        public async Task<object> UpdateStatusAsync(int id, UpdateStatusRequest request)
-        {
-            return await UpdateProductoStatusAsync(id, request);
-        }
     }
 }

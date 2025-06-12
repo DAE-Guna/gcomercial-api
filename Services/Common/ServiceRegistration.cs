@@ -1,6 +1,7 @@
 using gcomercial_api.Services.Almacen;
 using gcomercial_api.Services.Filtros;
 using Microsoft.Extensions.DependencyInjection;
+using gcomercial_api.Services;
 
 namespace gcomercial_api.Services.Common
 {

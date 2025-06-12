@@ -49,7 +49,7 @@ namespace gcomercial_api.Controllers.Catalogos
             }
         }
 
-        // POST: api/Almacen/estatus
+        // POST: api/Producto/estatus
         [HttpPost("estatus")]
         public async Task<IActionResult> UpdateProductoStatus(int id, [FromBody] UpdateStatusRequest request)
         {

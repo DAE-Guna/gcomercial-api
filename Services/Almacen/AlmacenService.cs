@@ -57,17 +57,18 @@ namespace gcomercial_api.Services.Almacen
                 // Obtener campos filtrables usando el servicio genérico
                 var camposFiltrables = await _databaseService.ObtenerCamposFiltrablesAsync(MODULO);
 
+                var camposConsulta = await _databaseService.ObtenerCamposConsultaAsync(MODULO);
+
                 // Construir query dinámico usando el servicio genérico
-                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, ORDER_BY_COLUMN);
+                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, camposConsulta, ORDER_BY_COLUMN);
 
                 // Ejecutar usando la conexión del contexto
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
 
                 // Contar total con query dinámico
-                var total = await _databaseService.EjecutarConteoAsync(connection, sqlInfo);
+                var totales = await _databaseService.EjecutarConsultaMultipleAsync(connection, sqlInfo);
 
-                // Obtener datos con query dinámico
                 var items = await _databaseService.EjecutarConsultaDatosAsync(connection, sqlInfo);
 
                 return new PaginatedResult<Dictionary<string, object>>
@@ -75,11 +76,11 @@ namespace gcomercial_api.Services.Almacen
                     Items = items,
                     Pagination = new PaginationInfo
                     {
-                        Total = total,
+                        Totales = totales,
                         PageSize = request.PageSize,
                         CurrentPage = request.Page,
-                        TotalPages = (int)Math.Ceiling((double)total / request.PageSize),
-                        HasMore = total > request.Page * request.PageSize
+                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First().Values.First()) / request.PageSize),
+                        HasMore = Convert.ToInt32(totales.First().Values.First()) > request.Page * request.PageSize
                     }
                 };
             }

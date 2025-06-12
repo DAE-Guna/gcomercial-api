@@ -48,12 +48,14 @@ namespace gcomercial_api.Services
 
                 var camposFiltrables = await _databaseService.ObtenerCamposFiltrablesAsync(MODULO);
 
-                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, ORDER_BY_COLUMN);
+                var camposConsulta = await _databaseService.ObtenerCamposConsultaAsync(MODULO);
+
+                var sqlInfo = _queryBuilder.BuildQuery(request, VIEW_NAME, camposFiltrables, camposConsulta, ORDER_BY_COLUMN);
 
                 using var connection = _context.Database.GetDbConnection();
                 await connection.OpenAsync();
 
-                var total = await _databaseService.EjecutarConteoAsync(connection, sqlInfo);
+                var totales = await _databaseService.EjecutarConsultaMultipleAsync(connection, sqlInfo);
 
                 var items = await _databaseService.EjecutarConsultaDatosAsync(connection, sqlInfo);
 
@@ -62,11 +64,11 @@ namespace gcomercial_api.Services
                     Items = items,
                     Pagination = new PaginationInfo
                     {
-                        Total = total,
+                        Totales = totales,
                         PageSize = request.PageSize,
                         CurrentPage = request.Page,
-                        TotalPages = (int)Math.Ceiling((double)total / request.PageSize),
-                        HasMore = total > request.Page * request.PageSize
+                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First()["total"]) / request.PageSize),
+                        HasMore = Convert.ToInt32(totales.First()["total"]) > request.Page * request.PageSize
                     }
                 };
             }

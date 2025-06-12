@@ -1,3 +1,4 @@
+using gcomercial_api.Models.GestionComercial;
 using gcomercial_api.Models.Shared;
 using System;
 using System.Collections.Generic;
@@ -14,14 +15,15 @@ namespace gcomercial_api.Services.Common
 
     public interface IQueryBuilderService
     {
-        SqlQueryInfo BuildQuery(GenericSearchRequest request, string viewName, List<string> camposFiltrables, string orderByColumn = "id");
+        SqlQueryInfo BuildQuery(GenericSearchRequest request, string viewName, List<string> camposFiltrables, List<string> camposConsulta, string orderByColumn = "id");
     }
 
     public class QueryBuilderService : IQueryBuilderService
     {
-        public SqlQueryInfo BuildQuery(GenericSearchRequest request, string viewName, List<string> camposFiltrables, string orderByColumn = "id")
+        public SqlQueryInfo BuildQuery(GenericSearchRequest request, string viewName, List<string> camposFiltrables, List<string> camposConsulta, string orderByColumn = "id")
         {
             var whereConditions = new List<string>();
+            var querySelectColumns = "";
             var parameters = new Dictionary<string, object>
             {
                 ["offset"] = (request.Page - 1) * request.PageSize,
@@ -39,6 +41,11 @@ namespace gcomercial_api.Services.Common
                 {
                     whereConditions.Add($"({string.Join(" OR ", searchConditions)})");
                 }
+            }
+
+            if (camposConsulta.Count > 0)
+            {
+                querySelectColumns = ", " + string.Join(", ", camposConsulta);
             }
 
             // Construir filtros específicos dinámicamente
@@ -69,7 +76,7 @@ namespace gcomercial_api.Services.Common
                 : "";
 
             var countQuery = $@"
-            SELECT COUNT(*) 
+            SELECT COUNT(*) total {querySelectColumns}
             FROM {viewName}
             {whereClause}";
 

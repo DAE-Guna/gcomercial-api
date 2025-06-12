@@ -18,7 +18,7 @@ namespace gcomercial_api.Models.Shared
 
     public class PaginationInfo
     {
-        public int Total { get; set; }
+        public List<Dictionary<string, object>>? Totales { get; set; }
         public int PageSize { get; set; }
         public int CurrentPage { get; set; }
         public int TotalPages { get; set; }

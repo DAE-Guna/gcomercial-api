@@ -13,9 +13,10 @@ namespace gcomercial_api.Services.Common
     public interface IDatabaseService
     {
         Task<List<string>> ObtenerCamposFiltrablesAsync(string modulo);
-        Task<int> EjecutarConteoAsync(DbConnection connection, SqlQueryInfo sqlInfo);
+        Task<List<Dictionary<string, object>>> EjecutarConsultaMultipleAsync(DbConnection connection, SqlQueryInfo sqlInfo);
         Task<List<Dictionary<string, object>>> EjecutarConsultaDatosAsync(DbConnection connection, SqlQueryInfo sqlInfo);
         Task<object> UpdateStatusAsync(string tableName, int id, UpdateStatusRequest request, string statusMessage);
+        Task<List<string>> ObtenerCamposConsultaAsync(string modulo);
     }
 
     public class DatabaseService : IDatabaseService
@@ -51,8 +52,25 @@ namespace gcomercial_api.Services.Common
             return campos ?? new List<string>();
         }
 
-        public async Task<int> EjecutarConteoAsync(DbConnection connection, SqlQueryInfo sqlInfo)
+        public async Task<List<string>> ObtenerCamposConsultaAsync(string modulo)
         {
+            var cacheKey = $"campos_consulta_{modulo}";
+            if (!_cache.TryGetValue(cacheKey, out List<string>? campos))
+            {
+                campos = await _context.CamposConsulta
+                    .Where(c => c.Modulo == modulo && c.Activo == 1)
+                    .Select(c => c.Campo)
+                    .ToListAsync();
+
+                _cache.Set(cacheKey, campos, TimeSpan.FromMinutes(30));
+            }
+            return campos ?? new List<string>();
+        }
+
+        public async Task<List<Dictionary<string, object>>> EjecutarConsultaMultipleAsync(DbConnection connection, SqlQueryInfo sqlInfo)
+        {
+            var results = new List<Dictionary<string, object>>();
+
             using var command = connection.CreateCommand();
             command.CommandText = sqlInfo.CountQuery;
 
@@ -63,8 +81,20 @@ namespace gcomercial_api.Services.Common
                     param.Value?.ToString()?.Replace("'", "''") ?? "NULL");
             }
 
-            var result = await command.ExecuteScalarAsync();
-            return Convert.ToInt32(result);
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var row = new Dictionary<string, object>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    var columnName = reader.GetName(i);
+                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    row[columnName] = value;
+                }
+                results.Add(row);
+            }
+
+            return results;
         }
 
         public async Task<List<Dictionary<string, object>>> EjecutarConsultaDatosAsync(

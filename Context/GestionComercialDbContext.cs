@@ -20,6 +20,8 @@ public partial class GestionComercialDbContext : DbContext
 
     public virtual DbSet<Basis> Bases { get; set; }
 
+    public virtual DbSet<CamposConsultum> CamposConsulta { get; set; }
+
     public virtual DbSet<CamposFiltrable> CamposFiltrables { get; set; }
 
     public virtual DbSet<CamposFiltrablesValore> CamposFiltrablesValores { get; set; }
@@ -94,6 +96,8 @@ public partial class GestionComercialDbContext : DbContext
 
     public virtual DbSet<VwProducto> VwProductos { get; set; }
 
+    public virtual DbSet<VwProveedore> VwProveedores { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=192.99.93.203;Database=dbGestionComercial;User Id=usrComisiones;Password=u5rC0m1c10n35;TrustServerCertificate=true;Encrypt=false;");
@@ -134,6 +138,22 @@ public partial class GestionComercialDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("nombre");
+        });
+
+        modelBuilder.Entity<CamposConsultum>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CamposCo__3213E83FF77ECC19");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Activo).HasColumnName("activo");
+            entity.Property(e => e.Campo)
+                .HasMaxLength(155)
+                .IsUnicode(false)
+                .HasColumnName("campo");
+            entity.Property(e => e.Modulo)
+                .HasMaxLength(155)
+                .IsUnicode(false)
+                .HasColumnName("modulo");
         });
 
         modelBuilder.Entity<CamposFiltrable>(entity =>
@@ -1797,6 +1817,9 @@ public partial class GestionComercialDbContext : DbContext
             entity.Property(e => e.Division)
                 .HasMaxLength(200)
                 .HasColumnName("division");
+            entity.Property(e => e.Estatus)
+                .HasMaxLength(10)
+                .HasColumnName("estatus");
             entity.Property(e => e.IdCategoria).HasColumnName("id_categoria");
             entity.Property(e => e.IdDepartamento).HasColumnName("id_departamento");
             entity.Property(e => e.IdDivision).HasColumnName("id_division");
@@ -1831,6 +1854,27 @@ public partial class GestionComercialDbContext : DbContext
                 .HasMaxLength(200)
                 .HasColumnName("subcategoria");
             entity.Property(e => e.UnidadXCaja).HasColumnName("unidad_x_caja");
+        });
+
+        modelBuilder.Entity<VwProveedore>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("VW_Proveedores");
+
+            entity.Property(e => e.DiasEntrega).HasColumnName("dias_entrega");
+            entity.Property(e => e.Estatus)
+                .HasMaxLength(10)
+                .HasColumnName("estatus");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IdEstatus).HasColumnName("id_estatus");
+            entity.Property(e => e.IdUnidadNegocio).HasColumnName("id_unidad_negocio");
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(200)
+                .HasColumnName("nombre");
+            entity.Property(e => e.UnidadNegocio)
+                .HasMaxLength(200)
+                .HasColumnName("unidad_negocio");
         });
 
         OnModelCreatingPartial(modelBuilder);

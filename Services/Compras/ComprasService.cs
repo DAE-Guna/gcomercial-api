@@ -19,7 +19,7 @@ namespace gcomercial_api.Services.Compras
         private readonly GestionComercialDbContext _context;
         private readonly IQueryBuilderService _queryBuilder;
         private readonly IDatabaseService _databaseService;
-        private const string MODULO = "existencias";
+        private const string MODULO = "compras";
         private const string VIEW_NAME = "Vw_Compras";
         private const string TABLE_NAME = "Vw_Compras";
         private const string ORDER_BY_COLUMN = "folio";
@@ -62,8 +62,8 @@ namespace gcomercial_api.Services.Compras
                         Totales = totales,
                         PageSize = request.PageSize,
                         CurrentPage = request.Page,
-                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First()["total"]) / request.PageSize),
-                        HasMore = Convert.ToInt32(totales.First()["total"]) > request.Page * request.PageSize
+                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First().Values.First()) / request.PageSize),
+                        HasMore = Convert.ToInt32(totales.First().Values.First()) > request.Page * request.PageSize
                     }
                 };
             }

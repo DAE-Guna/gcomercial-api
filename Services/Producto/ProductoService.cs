@@ -69,8 +69,8 @@ namespace gcomercial_api.Services
                         Totales = totales,
                         PageSize = request.PageSize,
                         CurrentPage = request.Page,
-                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First()["total"]) / request.PageSize),
-                        HasMore = Convert.ToInt32(totales.First()["total"]) > request.Page * request.PageSize
+                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First().Values.First()) / request.PageSize),
+                        HasMore = Convert.ToInt32(totales.First().Values.First()) > request.Page * request.PageSize
                     }
                 };
             }

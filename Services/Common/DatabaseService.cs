@@ -55,15 +55,15 @@ namespace gcomercial_api.Services.Common
         public async Task<List<string>> ObtenerCamposConsultaAsync(string modulo)
         {
             var cacheKey = $"campos_consulta_{modulo}";
-            if (!_cache.TryGetValue(cacheKey, out List<string>? campos))
-            {
-                campos = await _context.CamposConsulta
+            //if (!_cache.TryGetValue(cacheKey, out List<string>? campos))
+            //{
+            var campos = await _context.CamposConsulta
                     .Where(c => c.Modulo == modulo && c.Activo == 1)
                     .Select(c => c.Campo)
                     .ToListAsync();
 
-                _cache.Set(cacheKey, campos, TimeSpan.FromMinutes(30));
-            }
+            //    _cache.Set(cacheKey, campos, TimeSpan.FromMinutes(30));
+            //}
             return campos ?? new List<string>();
         }
 

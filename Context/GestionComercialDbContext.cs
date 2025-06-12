@@ -100,7 +100,7 @@ public partial class GestionComercialDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=192.99.93.203;Database=dbGestionComercial;User Id=usrComisiones;Password=u5rC0m1c10n35;TrustServerCertificate=true;Encrypt=false;");
+        => optionsBuilder.UseSqlServer("Server=192.168.100.14;Database=dbGestionComercial;User Id=usrComisiones;Password=u5rC0m1c10n35;TrustServerCertificate=true;Encrypt=false;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

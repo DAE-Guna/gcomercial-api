@@ -21,7 +21,7 @@ namespace gcomercial_api.Services.OrdenCompra
         private readonly GestionComercialDbContext _context;
         private readonly IQueryBuilderService _queryBuilder;
         private readonly IDatabaseService _databaseService;
-        private const string MODULO = "productos";
+        private const string MODULO = "odrenCompras";
         private const string VIEW_NAME = "Vw_Productos";
         private const string TABLE_NAME = "Productos";
         private const string ORDER_BY_COLUMN = "codigo";
@@ -64,8 +64,8 @@ namespace gcomercial_api.Services.OrdenCompra
                         Totales = totales,
                         PageSize = request.PageSize,
                         CurrentPage = request.Page,
-                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First()["total"]) / request.PageSize),
-                        HasMore = Convert.ToInt32(totales.First()["total"]) > request.Page * request.PageSize
+                        TotalPages = (int)Math.Ceiling((double)Convert.ToInt32(totales.First().Values.First()) / request.PageSize),
+                        HasMore = Convert.ToInt32(totales.First().Values.First()) > request.Page * request.PageSize
                     }
                 };
             }
